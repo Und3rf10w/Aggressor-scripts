@@ -1,0 +1,148 @@
+# This script adds matrix-hookshot support via generic webhooks to Cobalt Strike
+# Ensure that you configure the variables necessary at the beginning
+# @Und3rf10w
+# Modified from @vysecurity 's pushover-ng.cna
+
+$version = "0.1a";
+
+##########################
+# MODIFY THESE VARIABLES #
+##########################
+
+$location = "https://<MATRIX WEBHOOK LOCATION>";
+$uri = "/URI";
+
+##########################
+#   END USER VARIABLES   #
+##########################
+
+import java.net.URLEncoder;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+# Based off of byt3bl33d3r's implementation
+sub sendpost{
+    
+    $method = "POST";
+    $url = $1;
+    $body = $2 . "\r\n";
+
+    $USER_AGENT = "Mozilla/5.0";
+    $CONTENT_TYPE = "application/json; charset=UTF-8";
+
+    $urlobj = [new URL: $url];
+    
+    $con = [$urlobj openConnection];
+
+    [$con setRequestMethod: $method];
+
+    [$con setRequestProperty: "User-Agent", $USER_AGENT];
+    [$con setRequestProperty: "Content-Type", $CONTENT_TYPE];
+
+    [$con setDoOutput: true];
+    $wr = [new DataOutputStream: [$con getOutputStream]];
+    [$wr writeBytes: $body];
+    [$wr flush];
+    [$wr close];
+
+    $responseCode = [$con getResponseCode];
+
+    $in = [new BufferedReader: [new InputStreamReader: [$con getInputStream]]];
+
+    $inputLine = "";
+
+    $response = "";
+
+    $inputLine = [$in readLine];
+    $response = $response . $inputLine . "\r\n";
+
+    while ($inputLine ne ""){
+        $inputLine = [$in readLine];
+        $response = $response . $inputLine . "\r\n";
+    }
+
+    [$in close];
+
+    return $response;
+
+}
+
+
+on ready {
+    elog("Matrix-hookshot notifications are now configured!");
+    webhook("Cobalt Strike: Notification Configuration Status","matrix-hookshot notifications now configured");
+}
+
+#on event_notify {
+#    $time = formatDate($2, "yyyy.MM.dd 'at' HH:mm:ss z");
+#    webhook("Cobalt Strike: System Event","$time $+ : $1");
+#}
+
+on event_join {
+    $time = formatDate($2, "yyyy.MM.dd 'at' HH:mm:ss z");
+    webhook("Cobalt Strike: User Joined","$time $+ : $1 has joined");
+}
+
+on event_action {
+    $time = formatDate($2, "yyyy.MM.dd 'at' HH:mm:ss z");
+    webhook("Cobalt Strike: Action Performed","$time $+ : < $+ $3 $+ >: $1 ");
+}
+
+on event_public {
+    $time = formatDate($3, "yyyy.MM.dd 'at' HH:mm:ss z");
+    webhook("Cobalt Strike: New Message","$time $+ : [" . $1 . "]: " . $2 );
+}
+
+on event_quit {
+    $time = formatDate($2, "yyyy.MM.dd 'at' HH:mm:ss z");
+    webhook("Cobalt Strike: User Exit","$time $+ : $1 has quit");
+}
+
+on ssh_initial {
+        webhook("Cobalt Strike: New SSH Session", "New SSH Session Received - ID: $1 | Hostname " . binfo($1, "computer"));
+}
+
+on profiler_hit {
+        webhook("Cobalt Strike: Profiler Hit","Profiler Hit Received - External: $1 | Internal: $2 | UA: $3 | Email: " . tokenToEmail($5));
+}
+
+on web_hit {
+#   elog($1);
+    if ($1 == "POST" && $5 == "404 Not Found"){
+        $time = formatDate($9, "yyyy.MM.dd 'at' HH:mm:ss z");
+        $vuri = $2;
+        $eval = strrep($vuri, $uri, "");
+        # eval contains final bid number to exit
+        bexit($eval);
+            
+    }
+}
+
+on beacon_initial {
+    if (-isadmin $1){
+        webhook("Cobalt Strike: New Beacon","New Beacon Received - ID: $1 | User: " . binfo($1, "user") . " | Hostname: " . binfo($1, "computer") . " | PID: " . binfo($1,"pid") . " | HOST: " . binfo($1,"host") . " | ADMIN BEACON | " . " | IP: " . binfo($1, "external"), $1);
+        $elog = "New Beacon Received - ID: $1 | User: " . binfo($1, "user") . " | Hostname: " . binfo($1, "computer") . " | PID: " . binfo($1,"pid") . " | HOST: " . binfo($1,"host") . " | ADMIN BEACON | " . " IP: " . binfo($1, "external");
+    }
+    else {
+        webhook("Cobalt Strike: New Beacon","New Beacon Received - ID: $1 | User: " . binfo($1, "user") . " | Hostname: " . binfo($1, "computer") . " | PID: " . binfo($1,"pid") . " | HOST: " . binfo($1,"host") . " | " . " | IP: " . binfo($1, "external"), $1);
+        $elog = "New Beacon Received - ID: $1 | User: " . binfo($1, "user") . " | Hostname: " . binfo($1, "computer") . " | PID: " . binfo($1,"pid") . " | HOST: " . binfo($1,"host") .  " | IP: " . binfo($1, "external");
+    }
+
+    elog("\x039".$elog);
+}
+
+sub webhook {
+    $title = $1;
+    $message = $2;
+
+    # $body = "token=" . $token . "&user=" . $user . "&title=" . $title . "&message=" . $message;
+    # {"username": "matrix-hookshot-cs", "html": "\"<h2>$title</h2><br><p>$message<\p>\"", "text": "$title\r\n$message"}
+    $body = '{"html":' . "\"<h4>" . $title . "</h4><code>" . $message . "</code>\"," . '"text": ' . "\"". $title . "%0a%0d" . $message . "\"}";
+    
+    # We'll use fork so we won't be blocking. Now it can work nicely in either the UI or loaded with agscript
+    fork(&sendpost, $1 => $location, $2 => $body);
+
+}
